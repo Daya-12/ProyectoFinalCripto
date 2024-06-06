@@ -1,6 +1,5 @@
 .well(id='block'+block.block+'chain'+block.chain+'well')
   form.form-horizontal
-
     .form-group
       label.col-sm-2.control-label(for='block'+block.block+'chain'+block.chain+'number') #{__('Block')}:
       .col-sm-10
@@ -14,8 +13,9 @@
          input.form-control(id='block'+block.block+'chain'+block.chain+'nonce', type='text', value=block.nonce, onkeyup='updateChain('+block.block+', '+block.chain+', '+block.txCount+');')
 
     .form-group
-      label.col-sm-2.control-label Transacciones:
+      label.col-sm-2.control-label #{__('Transacciones')}:
       .col-sm-10
+        .transacciones-container(id='transactions-container' + block.block + 'chain' + block.chain)
         each tx, x in block.txs
           .input-group
             .input-group-addon #{__('$')}
@@ -45,5 +45,5 @@
       .col-sm-2
         i.icon-spinner.icon-spin.icon-large
       .col-sm-10
-        button.btn.btn-primary.ladda-button(id='block'+block.block+'chain'+block.chain+'mineButton', data-style='expand-right')
+        button.btn.btn-primary.ladda-button(id='block'+block.block+'chain'+block.chain+'mineButton', data-style='expand-right', disabled=(block.block != 1 && block.txs.length <= 2))
           span.ladda-label #{__('Mine')}

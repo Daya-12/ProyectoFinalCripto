@@ -32,5 +32,8 @@
 	"Sig": "Sig",
 	"Llaves": "Llaves",
 	"Firmas": "Firmas",
-	"Transacción": "Transacción"
+	"Transacción": "Transacción",
+	"Coinbase": "Coinbase",
+	"Transacciones": "Transacciones",
+	"To": "To"
 }

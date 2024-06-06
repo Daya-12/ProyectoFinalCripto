@@ -18,11 +18,11 @@ block content
                 label.control-label(for='data') #{__('Message')}
                 .input-group
                   .input-group-addon #{__('$')}
-                  input.form-control#sign-amount(value='20.00')
+                  input.form-control#sign-amount
                   .input-group-addon #{__('From')}:
                   input.form-control#sign-from
-                  .input-group-addon -&gt;
-                  input.form-control#sign-to(value='04cc955bf8e359cc7ebbb66f4c2dc616a93e8ba08e93d27996e20299ba92cba9cbd73c2ff46ed27a3727ba09486ba32b5ac35dd20c0adec020536996ca4d9f3d74')
+                  .input-group-addon #{__('To')}:
+                  input.form-control#sign-to
               .form-group
                 label.control-label(for='data') #{__('Private Key')}
                 input#privateKey(type='number').form-control
@@ -37,7 +37,7 @@ block content
                 label.control-label(for='data') #{__('Message')}
                 .input-group
                   .input-group-addon #{__('$')}
-                  input.form-control#verify-amount(value='20.00')
+                  input.form-control#verify-amount
                   .input-group-addon #{__('From')}:
                   input.form-control.border-primary#verify-from
                   .input-group-addon -&gt;
@@ -56,14 +56,16 @@ block content
       h3 #{__('Peer')} #{peer}
       .d-flex.flex-nowrap
         - var blocks = []
-        - blocks.push({block: 1, chain: chain, nonce: 16119, txs: [], previous: '0000000000000000000000000000000000000000000000000000000000000000'})
+        - blocks.push({block: 1, chain: chain, nonce: 0, txs: [], previous: '0000000000000000000000000000000000000000000000000000000000000000'})
         - blocks.push({block: 2, chain: chain, nonce: 0, txs: [], previous: ''})
         - blocks.push({block: 3, chain: chain, nonce: 0, txs: [], previous: ''})
         - blocks.push({block: 4, chain: chain, nonce: 0, txs: [], previous: ''})
         - blocks.push({block: 5, chain: chain, nonce: 0, txs: [], previous: ''})
         each block in blocks
           .col-10
+          .well(id='block' + block.block + 'chain' + block.chain + 'well')
             include includes/block.pug
+
   script.
     var EC = elliptic.elliptic().ec;
     var ec = new EC('secp256k1');
@@ -91,8 +93,21 @@ block content
     }
 
     $(function() {
+
+      var peers = {1: 'A', 2: 'B'};
+      for (let peer in peers) {
+        blocks.push({block: 1, chain: peers[peer], nonce: 0, txs: [], previous: '0000000000000000000000000000000000000000000000000000000000000000'});
+        blocks.push({block: 2, chain: peers[peer], nonce: 0, txs: [], previous: ''});
+        blocks.push({block: 3, chain: peers[peer], nonce: 0, txs: [], previous: ''});
+        blocks.push({block: 4, chain: peers[peer], nonce: 0, txs: [], previous: ''});
+        blocks.push({block: 5, chain: peers[peer], nonce: 0, txs: [], previous: ''});
+      }
+
       $('#sign-button').click(function() {
-        var message = $('#sign-amount').val() + $('#sign-from').val() + $('#sign-to').val();
+        var amount = $('#sign-amount').val();
+        var from = $('#sign-from').val();
+        var to = $('#sign-to').val();
+        var message = amount + from + to;
         var binaryMessage = buffer.Buffer.from(CryptoJS.SHA512(message).toString(CryptoJS.enc.Hex));
         var hexSignature = buffer.Buffer.from(keypair.sign(binaryMessage).toDER()).toString('hex');
         $('#sign-signature').val(hexSignature);
@@ -102,8 +117,7 @@ block content
           value: $('#sign-amount').val(),
           from: $('#sign-from').val(),
           to: $('#sign-to').val(),
-          signature: hexSignature,
-          seq: 0
+          signature: hexSignature
         };
 
         addTransaction(transaction);
@@ -111,8 +125,8 @@ block content
         update();
         resetVerifier();
       });
+
       $('#verify-button').click(function() {
-        // verify by using only the public key
         $('#verify-from').val($('#verify-from').val().replace(/[^0-9a-fA-F]/g, ''));
         var tmpKey;
         try {
@@ -130,6 +144,7 @@ block content
           $('#card').addClass('alert-danger');
         }
       });
+
       $('#sign-signature').bind('keyup', function() {
         resetVerifier();
       });
@@ -163,56 +178,77 @@ block content
         resetVerifier();
         update();
       });
-      if (Cookies.get('amount')) {
-        $('#sign-amount').val(Cookies.get('amount'));
-        $('#verify-amount').val(Cookies.get('amount'));
-      }
-      if (Cookies.get('amount')) {
-        $('#sign-from').val(Cookies.get('from'));
-        $('#verify-from').val(Cookies.get('from'));
-      }
-      if (Cookies.get('amount')) {
-        $('#sign-to').val(Cookies.get('to'));
-        $('#verify-to').val(Cookies.get('to'));
-      }
-      $('#sign-amount').bind('keyup', function() {
-        Cookies.set('amount', $('#sign-amount').val());
-        $('#verify-amount').val($('#sign-amount').val());
-      });
-      $('#sign-from').bind('keyup', function() {
-        Cookies.set('from', $('#sign-from').val());
-        $('#verify-from').val($('#sign-from').val());
-      });
-      $('#sign-to').bind('keyup', function() {
-        Cookies.set('to', $('#sign-to').val());
-        $('#verify-to').val($('#sign-to').val());
-      });
-      $('#verify-amount').bind('keyup', function() {
-        Cookies.set('amount', $('#verify-amount').val());
-        $('#sign-amount').val($('#verify-amount').val());
-      });
-      $('#verify-from').bind('keyup', function() {
-        Cookies.set('from', $('#verify-from').val());
-        $('#sign-from').val($('#verify-from').val());
-      });
-      $('#verify-to').bind('keyup', function() {
-        Cookies.set('to', $('#verify-to').val());
-        $('#sign-to').val($('#verify-to').val());
-      });
       $('#myTab').on('shown.bs.tab', function (e) {
         resetVerifier();
       });
       update();
+    });
 
-      // Inicializa los bloques
-      var peers = {1: 'A', 2: 'B'};
-      for (let peer in peers) {
-        blocks.push({block: 1, chain: peers[peer], nonce: 0, txs: [], previous: '0000000000000000000000000000000000000000000000000000000000000000'});
-        blocks.push({block: 2, chain: peers[peer], nonce: 0, txs: [], previous: ''});
-        blocks.push({block: 3, chain: peers[peer], nonce: 0, txs: [], previous: ''});
-        blocks.push({block: 4, chain: peers[peer], nonce: 0, txs: [], previous: ''});
-        blocks.push({block: 5, chain: peers[peer], nonce: 0, txs: [], previous: ''});
+    function addTransaction(transaction) {
+      let blockInfo = findNextAvailableBlock();
+      if (blockInfo) {
+        let lastTx = blockInfo.block.txs.length > 0 ? blockInfo.block.txs[blockInfo.block.txs.length - 1] : null;
+        transaction.seq = lastTx ? lastTx.seq + 1 : 1;
+        blockInfo.block.txs.push(transaction);
+        addTransactionToDOM(blockInfo.block.block, blockInfo.peer, blockInfo.block.txs.length - 1, transaction);
+      } else {
+        console.error("No available block found");
       }
+      console.log(blocks);
+    }
+
+    function findNextAvailableBlock() {
+      for (let peer of ['A', 'B']) {
+        for (let i = 2; i <= 5; i++) {
+          let block = blocks.find(b => b.block === i && b.chain === peer);
+          if (block && block.txs.length < 16) {
+            return { block: block, peer: peer };
+          }
+        }
+      }
+      return null;
+    }
+
+    function addTransactionToDOM(blockIndex, peer, txIndex, transaction) {
+      let transactionsContainerId = '#transactions-container' + blockIndex + 'chain' + (peer == 'A' ? 1 : 2);
+      let transactionsContainer = $(transactionsContainerId);
+
+      if (!transactionsContainer.length) {
+        console.error('No se encontró el contenedor de transacciones en el DOM.');
+        return;
+      }
+
+      let transactionHTML = `
+        <div class="input-group">
+          <span class="input-group-addon">$</span>
+          <input class="form-control" id="block${blockIndex}chain${peer}tx${txIndex}value" type="text" value="${transaction.value}" onkeyup="updateChain(${blockIndex}, '${peer}', ${txIndex});">
+          <span class="input-group-addon">From:</span>
+          <input class="form-control" id="block${blockIndex}chain${peer}tx${txIndex}from" type="text" value="${transaction.from}" onkeyup="updateChain(${blockIndex}, '${peer}', ${txIndex});">
+          <span class="input-group-addon">-&gt;</span>
+          <input class="form-control" id="block${blockIndex}chain${peer}tx${txIndex}to" type="text" value="${transaction.to}" onkeyup="updateChain(${blockIndex}, '${peer}', ${txIndex});">
+        </div>
+        <div class="input-group">
+          <span class="input-group-addon">Seq:</span>
+          <input class="form-control col-sm-1" id="block${blockIndex}chain${peer}tx${txIndex}seq" type="text" value="${transaction.seq}" onkeyup="updateChain(${blockIndex}, '${peer}', ${txIndex});">
+          <span class="input-group-addon">Sig:</span>
+          <input class="form-control" id="block${blockIndex}chain${peer}tx${txIndex}sig" type="text" value="${transaction.signature}" onkeyup="updateChain(${blockIndex}, '${peer}', ${txIndex});">
+        </div>
+        <br>`;
+      transactionsContainer.append(transactionHTML);
+    }
+
+    $(function() {
+      setup(1, 1, 0);
+      setup(2, 1, 4);
+      setup(3, 1, 3);
+      setup(4, 1, 3);
+      setup(5, 1, 4);
+
+      setup(1, 2, 0);
+      setup(2, 2, 4);
+      setup(3, 2, 3);
+      setup(4, 2, 3);
+      setup(5, 2, 4);
     });
 
     function getText(block, chain) {
@@ -265,50 +301,3 @@ block content
         console.log(e);
       }
     }
-
-    function addTransaction(transaction) {
-      let blockInfo = findNextAvailableBlock();
-      if (blockInfo) {
-        let lastTx = blockInfo.block.txs.length > 0 ? blockInfo.block.txs[blockInfo.block.txs.length - 1] : null;
-        transaction.seq = lastTx ? lastTx.seq + 1 : 1;
-        blockInfo.block.txs.push(transaction);
-        updateBlockUI(blockInfo.block.block, blockInfo.peer, blockInfo.block.txs.length - 1);
-      } else {
-        console.error("No available block found");
-      }
-    }
-
-    function findNextAvailableBlock() {
-      for (let peer of ['A', 'B']) {
-        for (let i = 2; i <= 5; i++) {
-          let block = blocks.find(b => b.block === i && b.chain === peer);
-          if (block && block.txs.length < 16) {
-            return { block: block, peer: peer };
-          }
-        }
-      }
-      return null;
-    }
-
-    function updateBlockUI(blockIndex, peer, txIndex) {
-    // Aquí actualizas la UI del bloque con la nueva transacción
-    let blockElement = $('#block' + blockIndex + 'peer' + peer);
-    let transaction = blocks.find(b => b.block === blockIndex && b.chain === peer).txs[txIndex];
-
-    blockElement.append(`
-      <div>
-        <span>Value: ${transaction.value}</span>
-        <span>From: ${transaction.from}</span>
-        <span>To: ${transaction.to}</span>
-        <span>Seq: ${transaction.seq}</span>
-        <span>Signature: ${transaction.signature}</span>
-      </div>
-    `);
-
-    // Actualiza los campos específicos del DOM
-    $('#block' + blockIndex + 'chain' + peer + 'tx' + txIndex + 'seq').val(transaction.seq);
-    }   
-
-
-    
-
