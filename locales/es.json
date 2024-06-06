@@ -28,5 +28,7 @@
 	"Signature": "Firma",
 	"Seq": "Seq",
 	"Sig": "Sig",
-	"To": "Para"
+	"To": "Para",
+	"Transaction/Blockchain": "Transacciones/Blockchain",
+	"Transacciones": "Transacciones"
 }

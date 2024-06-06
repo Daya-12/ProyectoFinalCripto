@@ -56,8 +56,10 @@ app.use(function(err, req, res, next) {
 });
 
 i18n.configure({
-  locales:['es'],
-  directory: __dirname + '/locales'
+  locales: ['es'],
+  directory: __dirname + '/locales',
+  defaultLocale: 'es'
 });
+app.use(i18n.init);
 
 module.exports = app;
