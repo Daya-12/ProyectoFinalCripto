@@ -48,6 +48,22 @@ block content
               .form-group
                 button#verify-button.btn.btn-block.btn-primary(type='button') #{__('Verify')}
 
+    .container-fluid
+    .row
+      h1 #{__('Blockchain')} 
+    - var peers = {1: 'A', 2: 'B'}
+    each peer, chain in peers
+      h3 #{__('Peer')} #{peer}
+      .d-flex.flex-nowrap
+        - var blocks = []
+        - blocks.push({block: 1, chain: chain, nonce: 16119, txs: [], previous: '0000000000000000000000000000000000000000000000000000000000000000'})
+        - blocks.push({block: 2, chain: chain, nonce: 0, txs: [], previous: ''})
+        - blocks.push({block: 3, chain: chain, nonce: 0, txs: [], previous: ''})
+        - blocks.push({block: 4, chain: chain, nonce: 0, txs: [], previous: ''})
+        - blocks.push({block: 5, chain: chain, nonce: 0, txs: [], previous: ''})
+        each block in blocks
+          .col-10
+            include includes/block.pug
   script.
     var EC = elliptic.elliptic().ec;
     var ec = new EC('secp256k1');
@@ -56,6 +72,8 @@ block content
     if (Cookies.get('privateKey')) {
       keypair = ec.keyFromPrivate(Cookies.get('privateKey'));
     }
+
+    var blocks = [];
 
     function update() {
       var prv = keypair.getPrivate('hex');
@@ -79,6 +97,17 @@ block content
         var hexSignature = buffer.Buffer.from(keypair.sign(binaryMessage).toDER()).toString('hex');
         $('#sign-signature').val(hexSignature);
         $('#verify-signature').val(hexSignature);
+
+        var transaction = {
+          value: $('#sign-amount').val(),
+          from: $('#sign-from').val(),
+          to: $('#sign-to').val(),
+          signature: hexSignature,
+          seq: 0
+        };
+
+        addTransaction(transaction);
+
         update();
         resetVerifier();
       });
@@ -174,4 +203,112 @@ block content
         resetVerifier();
       });
       update();
+
+      // Inicializa los bloques
+      var peers = {1: 'A', 2: 'B'};
+      for (let peer in peers) {
+        blocks.push({block: 1, chain: peers[peer], nonce: 0, txs: [], previous: '0000000000000000000000000000000000000000000000000000000000000000'});
+        blocks.push({block: 2, chain: peers[peer], nonce: 0, txs: [], previous: ''});
+        blocks.push({block: 3, chain: peers[peer], nonce: 0, txs: [], previous: ''});
+        blocks.push({block: 4, chain: peers[peer], nonce: 0, txs: [], previous: ''});
+        blocks.push({block: 5, chain: peers[peer], nonce: 0, txs: [], previous: ''});
+      }
     });
+
+    function getText(block, chain) {
+      var s = $('#block'+block+'chain'+chain+'number').val() +
+              $('#block'+block+'chain'+chain+'nonce').val() +
+              $('#block'+block+'chain'+chain+'coinbasevalue').val() +
+              $('#block'+block+'chain'+chain+'coinbaseto').val();
+
+      for (var x=0; $('#block'+block+'chain'+chain+'tx'+x+'value').length > 0; x++) {
+        s = s + $('#block'+block+'chain'+chain+'tx'+x+'value').val() +
+                $('#block'+block+'chain'+chain+'tx'+x+'from').val() +
+                $('#block'+block+'chain'+chain+'tx'+x+'to').val() +
+                $('#block'+block+'chain'+chain+'tx'+x+'seq').val() +
+                $('#block'+block+'chain'+chain+'tx'+x+'sig').val();
+      }
+      s = s + $('#block'+block+'chain'+chain+'previous').val();
+      return s;
+    }
+
+    function setup(block, chain, txCount) {
+      for (var x=0; x<txCount; x++) {
+        verifySignature(block, chain, x);
+      }
+      updateHash(block, chain);
+      $('#block'+block+'chain'+chain+'mineButton').click(function(e) {
+          e.preventDefault();
+          var l = Ladda.create(this);
+          l.start();
+          setTimeout(function() {
+              mine(block, chain, true);
+              l.stop();
+            }, 250); // give UI time to update
+        });
+    }
+
+    function verifySignature(block, chain, tx) {
+      try {
+        var message = $('#block'+block+'chain'+chain+'tx'+tx+'value').val() +
+                      $('#block'+block+'chain'+chain+'tx'+tx+'from').val() +
+                      $('#block'+block+'chain'+chain+'tx'+tx+'to').val() +
+                      $('#block'+block+'chain'+chain+'tx'+tx+'seq').val();
+        var binaryMessage = buffer.Buffer.from(CryptoJS.SHA512(message).toString(CryptoJS.enc.Hex));
+        var pubKey = ec.keyFromPublic($('#block'+block+'chain'+chain+'tx'+tx+'from').val(), 'hex');
+        if (pubKey.verify(binaryMessage, $('#block'+block+'chain'+chain+'tx'+tx+'sig').val()))
+          $('#block'+block+'chain'+chain+'tx'+tx+'sig').removeClass('text-danger');
+        else
+          $('#block'+block+'chain'+chain+'tx'+tx+'sig').addClass('text-danger');
+      }
+      catch(e) {
+        console.log(e);
+      }
+    }
+
+    function addTransaction(transaction) {
+      let blockInfo = findNextAvailableBlock();
+      if (blockInfo) {
+        let lastTx = blockInfo.block.txs.length > 0 ? blockInfo.block.txs[blockInfo.block.txs.length - 1] : null;
+        transaction.seq = lastTx ? lastTx.seq + 1 : 1;
+        blockInfo.block.txs.push(transaction);
+        updateBlockUI(blockInfo.block.block, blockInfo.peer, blockInfo.block.txs.length - 1);
+      } else {
+        console.error("No available block found");
+      }
+    }
+
+    function findNextAvailableBlock() {
+      for (let peer of ['A', 'B']) {
+        for (let i = 2; i <= 5; i++) {
+          let block = blocks.find(b => b.block === i && b.chain === peer);
+          if (block && block.txs.length < 16) {
+            return { block: block, peer: peer };
+          }
+        }
+      }
+      return null;
+    }
+
+    function updateBlockUI(blockIndex, peer, txIndex) {
+    // Aquí actualizas la UI del bloque con la nueva transacción
+    let blockElement = $('#block' + blockIndex + 'peer' + peer);
+    let transaction = blocks.find(b => b.block === blockIndex && b.chain === peer).txs[txIndex];
+
+    blockElement.append(`
+      <div>
+        <span>Value: ${transaction.value}</span>
+        <span>From: ${transaction.from}</span>
+        <span>To: ${transaction.to}</span>
+        <span>Seq: ${transaction.seq}</span>
+        <span>Signature: ${transaction.signature}</span>
+      </div>
+    `);
+
+    // Actualiza los campos específicos del DOM
+    $('#block' + blockIndex + 'chain' + peer + 'tx' + txIndex + 'seq').val(transaction.seq);
+    }   
+
+
+    
+

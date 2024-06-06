@@ -14,7 +14,7 @@
          input.form-control(id='block'+block.block+'chain'+block.chain+'nonce', type='text', value=block.nonce, onkeyup='updateChain('+block.block+', '+block.chain+', '+block.txCount+');')
 
     .form-group
-      label.col-sm-2.control-label Tx:
+      label.col-sm-2.control-label Transacciones:
       .col-sm-10
         each tx, x in block.txs
           .input-group

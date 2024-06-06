@@ -1,4 +1,4 @@
-var difficulty = 4;        // number of zeros required at front of hash
+var difficulty = 3;        // number of zeros required at front of hash
 var maximumNonce = 500000; // limit the nonce to this so we don't mine too long
 
 /////////////////////////
