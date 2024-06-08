@@ -304,6 +304,7 @@ block content
       for (var x=0; $('#block'+block+'chain'+chain+'tx'+x+'value').length > 0; x++) {
         s = s + $('#block'+block+'chain'+chain+'tx'+x+'sig').val();
       }
+      s = s + $('#block'+block+'chain'+chain+'previous').val();
       return s;
     }
 
