@@ -8,8 +8,6 @@ block content
         ul.nav.nav-tabs.card-header-tabs#myTab(role='tablist')
           li.nav-item
             a.nav-link.active#sign-tab(data-toggle='tab', href='#sign', role='tab', aria-controls='sign', aria-selected='true') #{__('Sign')}
-          li.nav-item
-            a.nav-link#verify-tab(data-toggle='tab', href='#verify', role='tab', aria-controls='verify', aria-selected='false') #{__('Verify')}
       .card-body#card
         .tab-content#myTabContent
           .tab-pane.show.active#sign(role='tabpanel', aria-labelledby='sign-tab')
@@ -20,9 +18,9 @@ block content
                   .input-group-addon #{__('$')}
                   input.form-control#sign-amount
                   .input-group-addon #{__('From')}:
-                  input.form-control#sign-from
+                  select.form-control#sign-from
                   .input-group-addon #{__('To')}:
-                  input.form-control#sign-to
+                  select.form-control#sign-to
               .form-group
                 label.control-label(for='data') #{__('Private Key')}
                 input#privateKey(type='number').form-control
@@ -41,13 +39,16 @@ block content
                   .input-group-addon #{__('From')}:
                   input.form-control.border-primary#verify-from
                   .input-group-addon -&gt;
-                  input.form-control#verify-to(value='04cc955bf8e359cc7ebbb66f4c2dc616a93e8ba08e93d27996e20299ba92cba9cbd73c2ff46ed27a3727ba09486ba32b5ac35dd20c0adec020536996ca4d9f3d74')
+                  input.form-control#verify-to
               .form-group
                 label.control-label(for='data') #{__('Signature')}
                 input#verify-signature.form-control
               .form-group
                 button#verify-button.btn.btn-block.btn-primary(type='button') #{__('Verify')}
     hr
+
+                      
+
     .container-fluid
     .row
     - var peers = {1: 'A', 2: 'B'}
@@ -81,9 +82,10 @@ block content
       var pub = keypair.getPublic('hex');
       $('#privateKey').val(bigInt(prv, 16).toString());
       $('#sign-from').val(pub);
+      $('#sign-to').val(pub);
       $('#verify-from').val(pub);
       Cookies.set('privateKey', prv.toString());
-      Cookies.set('publicKey', pub);
+      Cookies.set('publicKey', pub.toString());
     }
 
     function resetVerifier() {
@@ -91,7 +93,26 @@ block content
       $('#card').removeClass('alert-danger');
     }
 
+    function generateRandomNames() {
+      var names = ["Carlos", "Ana", "Juan", "Valentina", "Maria"];
+      var options = '';
+      names.forEach(function(name) {
+        var hash = CryptoJS.SHA512(name + Math.random()).toString(CryptoJS.enc.Hex);
+        options += '<option value="' + hash + '">' + name + '</option>';
+      });
+      return options;
+    }
+
+    function populateDropdowns() {
+      var options = generateRandomNames();
+      $('#sign-from').append(options);
+      $('#sign-to').append(options);
+      $('#verify-from').append(options);
+      $('#verify-to').append(options);
+    }
+
     $(function() {
+      populateDropdowns();
 
       var peers = {1: 'A', 2: 'B'};
       for (let peer in peers) {
@@ -106,23 +127,40 @@ block content
         var amount = $('#sign-amount').val();
         var from = $('#sign-from').val();
         var to = $('#sign-to').val();
-        var message = amount + from + to;
-        var binaryMessage = buffer.Buffer.from(CryptoJS.SHA512(message).toString(CryptoJS.enc.Hex));
-        var hexSignature = buffer.Buffer.from(keypair.sign(binaryMessage).toDER()).toString('hex');
-        $('#sign-signature').val(hexSignature);
-        $('#verify-signature').val(hexSignature);
+        var errorMessage = '';
 
-        var transaction = {
-          value: $('#sign-amount').val(),
-          from: $('#sign-from').val(),
-          to: $('#sign-to').val(),
-          signature: hexSignature
-        };
+        if (amount === null || amount === '') {
+            errorMessage += 'Por favor, ingresa el valor para generar la transaccion.\n';
+        }
+        if (from === null || from === '') {
+            errorMessage += 'Por favor, ingresa el origen de la transaccion.\n';
+        }
+        if (to === null || to === '') {
+            errorMessage += 'Por favor, ingresa el destino de la transaccion.\n';
+        }
 
-        addTransaction(transaction);
+        // Si hay algún mensaje de error, mostrar la alerta
+        if (errorMessage !== '') {
+            alert(errorMessage);
+        }else{
+          var message = amount + from + to;
+          var binaryMessage = buffer.Buffer.from(CryptoJS.SHA512(message).toString(CryptoJS.enc.Hex));
+          var hexSignature = buffer.Buffer.from(keypair.sign(binaryMessage).toDER()).toString('hex');
+          $('#sign-signature').val(hexSignature);
+          $('#verify-signature').val(hexSignature);
 
-        update();
-        resetVerifier();
+          var transaction = {
+            value: $('#sign-amount').val(),
+            from: $('#sign-from').val(),
+            to: $('#sign-to').val(),
+            signature: hexSignature
+          };
+
+          addTransaction(transaction);
+
+          update();
+          resetVerifier();
+        }
       });
 
       $('#verify-button').click(function() {
@@ -235,6 +273,7 @@ block content
         <br>`;
       transactionsContainer.append(transactionHTML);
     }
+
     function checkIfMiningAllowed(blockIndex, peer) {
       let peerModificado = (peer == 'A' ? 1 : 2);
       let block = blocks.find(b => b.block === blockIndex && b.chain === peer);
